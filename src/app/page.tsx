@@ -8,6 +8,16 @@ import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { toast } from '@/hooks/use-toast'
 
+
+const EVENT_GALLERY = [
+  '/images/nightflix-1.jpg',
+  '/images/nightflix-2.jpg',
+  '/images/nightflix-3.jpg',
+  '/images/nightflix-4.jpg',
+  '/images/nightflix-5.jpg',
+]
+
+
 const TICKET_TIERS = [
   {
     id: 'regular',
@@ -60,6 +70,72 @@ const TICKET_TIERS = [
     isGroup: true
   }
 ]
+
+
+function AutoCarousel() {
+  const images = [
+    'https://raw.githubusercontent.com/DannyYo696/svillage/b53ddbb1d05ac5cd96902b23a1ce2b43043bc881/_MG_7618.jpg',
+    'https://raw.githubusercontent.com/DannyYo696/svillage/c1ca406beac59fcabcf79c236cbdfb52ff883dc5/_MG_7685.jpg',
+    'https://raw.githubusercontent.com/DannyYo696/svillage/0ec915f6c90cb5e4f5bc487d9ef629c0a9a9b6d9/_MG_7770.jpg',
+    'https://raw.githubusercontent.com/DannyYo696/svillage/8d940d3c33bdb8220effe4ca9de4678cc3284710/_MG_7788.jpg',
+    'https://raw.githubusercontent.com/DannyYo696/svillage/1e09662e759a683b296438749046aa1d674d8b3c/_MG_7760.jpg',
+  ]
+
+  const [currentIndex, setCurrentIndex] = useState(0)
+  const [isHovered, setIsHovered] = useState(false)
+
+  // Auto slide
+  useState(() => {
+    if (isHovered) return
+
+    const interval = setInterval(() => {
+      setCurrentIndex((prev) => (prev + 1) % images.length)
+    }, 3500)
+
+    return () => clearInterval(interval)
+  })
+
+  return (
+    <div
+      className="relative max-w-6xl mx-auto overflow-hidden rounded-3xl border border-slate-800 shadow-2xl"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
+      {/* Slides */}
+      <div
+        className="flex transition-transform duration-700 ease-in-out"
+        style={{ transform: `translateX(-${currentIndex * 100}%)` }}
+      >
+        {images.map((image, index) => (
+          <div key={index} className="min-w-full h-[320px] sm:h-[380px] md:h-[440px] relative">
+            <img
+              src={image}
+              alt={`Nightflix Event ${index + 1}`}
+              className="w-full h-full object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
+          </div>
+        ))}
+      </div>
+
+      {/* Dots */}
+      <div className="absolute bottom-5 left-1/2 -translate-x-1/2 flex gap-2">
+        {images.map((_, index) => (
+          <button
+            key={index}
+            onClick={() => setCurrentIndex(index)}
+            className={`h-2.5 w-2.5 rounded-full transition-all ${
+              currentIndex === index
+                ? 'bg-rose-500 w-6'
+                : 'bg-slate-500/60 hover:bg-slate-400'
+            }`}
+          />
+        ))}
+      </div>
+    </div>
+  )
+}
+
 
 export default function Home() {
   const [selectedTier, setSelectedTier] = useState<string | null>(null)
@@ -167,6 +243,23 @@ export default function Home() {
             <ArrowRight className="ml-2 h-5 w-5" />
           </Button>
         </section>
+
+
+        {/* Past Event Auto Carousel */}
+<section className="mb-20 sm:mb-28">
+  <div className="text-center mb-10">
+    <h2 className="text-3xl sm:text-4xl font-bold text-white mb-3">
+      Past Nightflix Moments
+    </h2>
+    <p className="text-slate-400 text-lg">
+      Relive the energy, the lights, and the unforgettable vibes
+    </p>
+  </div>
+
+  <AutoCarousel />
+</section>
+
+
 
         {/* Ticket Tiers Section */}
         <section id="tickets" className="mb-16 sm:mb-24">
