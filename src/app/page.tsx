@@ -53,7 +53,7 @@ const TICKET_TIERS = [
     popular: true
   },
   {
-    id: 'gang-of-5',
+    id: 'gang_of_5',
     name: 'Gang of 5',
     price: 20000,
     description: 'Group package for 5 people',
