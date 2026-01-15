@@ -36,7 +36,7 @@ interface TicketTier {
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   'regular': TicketIcon,
   'vip': Crown,
-  'gang-of-5': Users,
+  'gang_of_5': Users,
 }
 
 export default function CheckoutPage() {
