@@ -1,273 +1,152 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { db } from '@/lib/db'
-import { Resend } from 'resend'
+import { NextRequest, NextResponse } from 'next/server';
+import { Resend } from 'resend';
+import { db } from '@/lib/db';
 
-const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY
-const RESEND_API_KEY = process.env.RESEND_API_KEY
+const resend = new Resend(process.env.RESEND_API_KEY);
 
-// Function to send ticket email using Resend
-async function sendTicketEmail(ticket: any) {
-  if (!RESEND_API_KEY) {
-    console.log('Resend API key not configured, skipping email')
-    return
-  }
-
+export async function POST(request: NextRequest) {
   try {
-    const resend = new Resend(RESEND_API_KEY)
+    const body = await request.json();
+    const { purchaseId, tickets } = body;
 
-    const data = await resend.emails.send({
-      from: process.env.EMAIL_FROM || 'Nightflix <noreply@buynightflix.com>',
-      to: [ticket.buyerEmail],
-      subject: `Your Nightflix Ticket - ${ticket.tier.replace('_', ' ')}`,
-      html: `
-        <!DOCTYPE html>
-        <html>
-          <head>
-            <meta charset="utf-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Your Nightflix Ticket</title>
-            <style>
-              body {
-                font-family: Arial, sans-serif;
-                background-color: #0f172a;
-                color: #ffffff;
-                margin: 0;
-                padding: 20px;
-              }
-              .container {
-                max-width: 600px;
-                margin: 0 auto;
-                background-color: #1e293b;
-                border-radius: 12px;
-                overflow: hidden;
-              }
-              .header {
-                background: linear-gradient(135deg, #f43f5e 0%, #a855f7 100%);
-                padding: 30px;
-                text-align: center;
-              }
-              .header h1 {
-                margin: 0;
-                font-size: 28px;
-              }
-              .content {
-                padding: 30px;
-              }
-              .ticket-card {
-                background-color: #0f172a;
-                border-radius: 8px;
-                padding: 20px;
-                margin-bottom: 20px;
-              }
-              .ticket-title {
-                font-size: 20px;
-                color: #f43f5e;
-                margin-bottom: 15px;
-              }
-              .detail-row {
-                display: flex;
-                justify-content: space-between;
-                padding: 8px 0;
-                border-bottom: 1px solid #334155;
-              }
-              .detail-label {
-                color: #94a3b8;
-              }
-              .detail-value {
-                color: #ffffff;
-                font-weight: 600;
-              }
-              .ticket-code {
-                background-color: #0f172a;
-                border: 2px dashed #f43f5e;
-                border-radius: 8px;
-                padding: 15px;
-                text-align: center;
-                margin: 20px 0;
-              }
-              .ticket-code h3 {
-                margin: 0 0 10px 0;
-                color: #94a3b8;
-                font-size: 12px;
-              }
-              .ticket-code p {
-                margin: 0;
-                font-size: 24px;
-                font-weight: bold;
-                color: #f43f5e;
-                font-family: monospace;
-              }
-              .footer {
-                background-color: #0f172a;
-                padding: 20px;
-                text-align: center;
-                font-size: 12px;
-                color: #94a3b8;
-              }
-              .cta-button {
-                display: inline-block;
-                background: linear-gradient(135deg, #f43f5e 0%, #a855f7 100%);
-                color: white;
-                padding: 12px 30px;
-                text-decoration: none;
-                border-radius: 6px;
-                font-weight: 600;
-                margin-top: 15px;
-              }
-              .badge {
-                display: inline-block;
-                background-color: #f43f5e;
-                color: white;
-                padding: 4px 12px;
-                border-radius: 20px;
-                font-size: 12px;
-                font-weight: 600;
-              }
-            </style>
-          </head>
-          <body>
-            <div class="container">
-              <div class="header">
-                <h1>🎉 Your Nightflix Ticket!</h1>
-              </div>
-              <div class="content">
-                <p style="color: #94a3b8; margin-bottom: 20px;">
-                  Thank you for purchasing your Nightflix ticket! Below are your ticket details.
-                </p>
-                
-                <div class="ticket-card">
-                  <h2 class="ticket-title">${ticket.tier.replace('_', ' ')} Ticket</h2>
-                  <span class="badge">${ticket.tier.replace('_', ' ')}</span>
-                  
-                  <div style="margin-top: 20px;">
-                    <div class="detail-row">
-                      <span class="detail-label">Attendee Name</span>
-                      <span class="detail-value">${ticket.buyerName}</span>
-                    </div>
-                    <div class="detail-row">
-                      <span class="detail-label">Email</span>
-                      <span class="detail-value">${ticket.buyerEmail}</span>
-                    </div>
-                    <div class="detail-row">
-                      <span class="detail-label">Phone</span>
-                      <span class="detail-value">${ticket.buyerPhone}</span>
-                    </div>
-                    <div class="detail-row">
-                      <span class="detail-label">Quantity</span>
-                      <span class="detail-value">${ticket.quantity} ticket(s)</span>
-                    </div>
-                    <div class="detail-row">
-                      <span class="detail-label">Amount Paid</span>
-                      <span class="detail-value">₦${ticket.amount.toLocaleString()}</span>
-                    </div>
-                    <div class="detail-row">
-                      <span class="detail-label">Payment Status</span>
-                      <span class="detail-value" style="color: #22c55e;">${ticket.paymentStatus}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="ticket-code">
-                  <h3>TICKET CODE (Show at venue)</h3>
-                  <p>${ticket.ticketCode}</p>
-                </div>
-
-                <div style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin-bottom: 20px;">
-                  <p style="margin: 0; color: #92400e; font-size: 14px;">
-                    <strong>Important:</strong> Please show this ticket with your ticket code at the venue entrance for verification. 
-                    You can also show this email on your phone.
-                  </p>
-                </div>
-
-                <p style="color: #94a3b8; margin-bottom: 15px;">
-                  Need help? Contact us at support@nightflix.com
-                </p>
-
-                <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://www.buynightflix.com/'}/success?reference=${ticket.paymentRef}" class="cta-button">
-                  View Your Ticket Online
-                </a>
-              </div>
-            </div>
-            <div class="footer">
-              <p>Payment Reference: ${ticket.paymentRef}</p>
-              <p style="margin-top: 10px;">© 2025 Nightflix. All rights reserved.</p>
-            </div>
-          </body>
-        </html>
-      `,
-    })
-
-    console.log('Ticket email sent successfully via Resend to:', ticket.buyerEmail)
-  } catch (emailError) {
-    console.error('Failed to send ticket email via Resend:', emailError)
-    // Don't throw - this is non-critical
-  }
-}
-
-export async function GET(request: NextRequest) {
-  try {
-    const searchParams = request.nextUrl.searchParams
-    const reference = searchParams.get('reference')
-
-    if (!reference) {
+    if (!purchaseId || !tickets || !Array.isArray(tickets)) {
       return NextResponse.json(
-        { error: 'Reference parameter is required' },
+        { success: false, error: 'Invalid request data' },
         { status: 400 }
-      )
+      );
     }
 
-    console.log('Verifying payment with reference:', reference)
+    // Get purchase details
+    const purchase = await db.purchase.findUnique({
+      where: { id: purchaseId },
+      include: {
+        ticketTier: true,
+        event: true
+      }
+    });
 
-    // Find ticket by payment reference
-    const ticket = await db.ticket.findUnique({
-      where: { paymentRef: reference },
-    })
-
-    if (!ticket) {
-      console.log('Ticket not found for reference:', reference)
+    if (!purchase) {
       return NextResponse.json(
-        { error: 'Ticket not found. Please complete your purchase.' },
+        { success: false, error: 'Purchase not found' },
         { status: 404 }
-      )
+      );
     }
 
-    console.log('Found ticket:', ticket.id, 'Status:', ticket.paymentStatus)
+    // Generate ticket HTML
+    const ticketHtml = tickets.map((ticket: any, index: number) => `
+      <div style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border-radius: 12px; overflow: hidden; margin-bottom: 20px;">
+        <div style="background: linear-gradient(135deg, #9333ea 0%, #ec4899 100%); padding: 20px;">
+          <h2 style="color: white; margin: 0; font-size: 20px; font-weight: bold;">${purchase.event.name}</h2>
+          <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0 0; font-size: 14px;">${purchase.ticketTier.name} Ticket</p>
+        </div>
+        <div style="padding: 20px;">
+          <div style="text-align: center; margin: 20px 0;">
+            <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(ticket.qrCode)}" alt="QR Code" style="width: 150px; height: 150px; border-radius: 8px;" />
+          </div>
+          <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+            <p style="color: rgba(255,255,255,0.7); margin: 0 0 5px 0; font-size: 12px;">Ticket Number</p>
+            <p style="color: white; margin: 0; font-size: 18px; font-weight: bold; font-family: monospace;">${ticket.ticketNumber}</p>
+          </div>
+          ${ticket.attendeeName ? `
+          <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 8px;">
+            <p style="color: rgba(255,255,255,0.7); margin: 0 0 5px 0; font-size: 12px;">Attendee</p>
+            <p style="color: white; margin: 0; font-size: 16px;">${ticket.attendeeName}</p>
+          </div>
+          ` : ''}
+        </div>
+      </div>
+    `).join('');
 
-    // Update ticket status if it's still pending
-    if (ticket.paymentStatus === 'PENDING') {
-      console.log('Updating ticket status to COMPLETED')
-      
-      // Update payment status
-      const updatedTicket = await db.ticket.update({
-        where: { id: ticket.id },
-        data: {
-          paymentStatus: 'COMPLETED',
-        },
-      })
+    const emailHtml = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Your Nightflix Tickets</title>
+        </head>
+        <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; margin: 0; padding: 0;">
+          <div style="max-width: 600px; margin: 0 auto; background: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            <!-- Header -->
+            <div style="background: linear-gradient(135deg, #9333ea 0%, #ec4899 100%); padding: 40px 20px; text-align: center;">
+              <h1 style="color: white; margin: 0; font-size: 32px; font-weight: bold;">🎬 Nightflix</h1>
+              <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0; font-size: 18px;">Your Tickets Are Ready!</p>
+            </div>
 
-      // Send ticket email using Resend (only once)
-      await sendTicketEmail(updatedTicket)
+            <!-- Content -->
+            <div style="padding: 40px 20px;">
+              <div style="text-align: center; margin-bottom: 30px;">
+                <div style="display: inline-flex; align-items: center; justify-content: center; width: 60px; height: 60px; background: #dcfce7; border-radius: 50%; margin-bottom: 15px;">
+                  <svg style="width: 32px; height: 32px; color: #22c55e;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                  </svg>
+                </div>
+                <h2 style="color: #1e293b; margin: 0 0 10px 0; font-size: 24px;">Payment Successful!</h2>
+                <p style="color: #64748b; margin: 0; font-size: 16px;">Thank you for purchasing tickets to Nightflix. Your tickets are attached below.</p>
+              </div>
 
-      return NextResponse.json({
-        success: true,
-        ticket: updatedTicket,
-      })
-    }
+              <!-- Ticket Count Badge -->
+              <div style="text-align: center; margin-bottom: 30px;">
+                <span style="display: inline-block; background: linear-gradient(135deg, #9333ea 0%, #ec4899 100%); color: white; padding: 8px 20px; border-radius: 20px; font-weight: bold;">
+                  ${tickets.length} Ticket${tickets.length > 1 ? 's' : ''} Purchased
+                </span>
+              </div>
 
-    // Return existing ticket if already completed
-    console.log('Ticket already completed, returning existing ticket')
+              <!-- Tickets -->
+              ${ticketHtml}
+
+              <!-- Instructions -->
+              <div style="background: #f8fafc; border-radius: 12px; padding: 25px; margin-top: 30px;">
+                <h3 style="color: #1e293b; margin: 0 0 15px 0; font-size: 18px;">📋 How to Use Your Tickets</h3>
+                <ol style="color: #64748b; margin: 0; padding-left: 20px; font-size: 15px; line-height: 1.8;">
+                  <li style="margin-bottom: 10px;">Save this email or take screenshots of your tickets</li>
+                  <li style="margin-bottom: 10px;">Present the QR code on your ticket at the venue entrance</li>
+                  <li style="margin-bottom: 10px;">Your ticket will be scanned for verification</li>
+                  <li style="margin-bottom: 0;">Each ticket can only be used once</li>
+                </ol>
+              </div>
+
+              <!-- Important Notice -->
+              <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin-top: 25px; border-radius: 4px;">
+                <p style="color: #92400e; margin: 0; font-size: 14px;">
+                  <strong>Important:</strong> Please keep your tickets secure. Do not share your QR code with anyone.
+                </p>
+              </div>
+            </div>
+
+            <!-- Footer -->
+            <div style="background: #1e293b; color: white; padding: 30px 20px; text-align: center;">
+              <p style="margin: 0 0 10px 0; font-size: 18px; font-weight: bold;">Nightflix</p>
+              <p style="margin: 0; opacity: 0.7; font-size: 14px;">The Ultimate Movie Night Experience</p>
+              <p style="margin: 20px 0 0 0; opacity: 0.5; font-size: 12px;">
+                © ${new Date().getFullYear()} Nightflix. All rights reserved.
+              </p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    // Send email
+    const emailData = {
+      from: 'Nightflix <tickets@buynightflix.ng>',
+      to: purchase.email,
+      subject: `Your Nightflix Tickets (${tickets.length} Ticket${tickets.length > 1 ? 's' : ''})`,
+      html: emailHtml
+    };
+
+    await resend.emails.send(emailData);
+
     return NextResponse.json({
       success: true,
-      ticket,
-    })
+      message: 'Email sent successfully'
+    });
+
   } catch (error) {
-    console.error('Payment verification error:', error)
+    console.error('Email sending error:', error);
     return NextResponse.json(
-      { 
-        error: 'Internal server error',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      },
+      { success: false, error: 'Failed to send email' },
       { status: 500 }
-    )
+    );
   }
 }
